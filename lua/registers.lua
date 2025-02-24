@@ -153,7 +153,7 @@ function registers.default_options()
         show_register_types = true,
         bind_keys = {
             -- Show the window when pressing " in normal mode, applying the selected register as part of a motion, which is the default behavior of Neovim
-            normal    = registers.show_window({ mode = "motion" }),
+            normal    = registers.show_window({ mode = "paste" }),
             -- Show the window when pressing " in visual mode, applying the selected register as part of a motion, which is the default behavior of Neovim
             visual    = registers.show_window({ mode = "motion" }),
             -- Show the window when pressing <C-R> in insert mode, inserting the selected register, which is the default behavior of Neovim
@@ -203,7 +203,7 @@ function registers.default_options()
             -- Show a small highlight in the sign column for the line the cursor is on
             highlight_cursorline = true,
             -- Don't draw a border around the registers window
-            border = "none",
+            border = "single",
             -- Apply a tiny bit of transparency to the the window, letting some characters behind it bleed through
             transparency = 10,
         },
@@ -490,7 +490,7 @@ function registers.preview_highlighted_register(options)
         -- Display the register content
         vim.api.nvim_buf_set_extmark(registers._preview_buffer, registers._namespace, line - 1, col, {
             virt_text = lines,
-            virt_text_win_col = col,
+            virt_text_pos = "inline",
         })
     end)
 end
@@ -548,10 +548,10 @@ function registers._create_window()
     registers._buffer = vim.api.nvim_create_buf(false, true)
 
     -- Remove the buffer when the window is closed
-    vim.api.nvim_buf_set_option(registers._buffer, "bufhidden", "wipe")
+    vim.bo[registers._buffer].bufhidden = "wipe"
 
     -- Set the filetype
-    vim.api.nvim_buf_set_option(registers._buffer, "filetype", "registers")
+    vim.bo[registers._buffer].filetype = "reigsters"
 
     -- Stop when the window is interrupted
     if registers._is_interrupted() then
@@ -590,6 +590,10 @@ function registers._create_window()
         col = 0,
         -- How the edges are rendered
         border = registers.options.window.border,
+        title = "reigisters",
+        title_pos = "center",
+        footer = "Empty: " .. table.concat(registers._empty_registers, " "),
+        footer_pos = "center",
     }
     -- Make the window active when the window is not a preview
     registers._window = vim.api.nvim_open_win(registers._buffer, true, window_options)
@@ -613,21 +617,20 @@ function registers._create_window()
     end
 
     -- Make the buffer content cut-off instead of starting on new line
-    vim.api.nvim_win_set_option(registers._window, "wrap", false)
+    vim.wo[registers._window].wrap = false
 
     -- Show a column on the left for the register names
-    vim.api.nvim_win_set_option(registers._window, "signcolumn",
-        -- Add space for the extra symbol in the sign column depending on whether we should show the register types
-        registers.options.show_register_types and "yes:2" or "yes")
+    -- Add space for the extra symbol in the sign column depending on whether we should show the register types
+    vim.wo[registers._window].signcolumn = registers.options.show_register_types and "yes:2" or "yes"
 
     -- Highlight the cursor line
     if registers.options.window.highlight_cursorline then
-        vim.api.nvim_win_set_option(registers._window, "cursorline", true)
+        vim.wo[registers._window].cursorline = true
     end
 
     -- Make the window transparent
     if registers.options.window.transparency then
-        vim.api.nvim_win_set_option(registers._window, "winblend", registers.options.window.transparency)
+        vim.wo[registers._window].winblend = registers.options.window.transparency
     end
 
     -- Add the colors
@@ -768,7 +771,8 @@ end
 ---Fill the window's buffer.
 function registers._fill_window()
     -- Don't allow the buffer to be modified
-    vim.api.nvim_buf_set_option(registers._buffer, "modifiable", true)
+    vim.bo[registers._buffer].modifiable = true
+    -- vim.api.nvim_buf_set_option(registers._buffer, "modifiable", true)
 
     -- Create an array of lines for all the registers
     local lines = {}
@@ -806,7 +810,8 @@ function registers._fill_window()
     end
 
     -- Don't allow the buffer to be modified
-    vim.api.nvim_buf_set_option(registers._buffer, "modifiable", false)
+    vim.bo[registers._buffer].modifiable = false
+    -- vim.api.nvim_buf_set_option(registers._buffer, "modifiable", false)
 end
 
 ---@private
